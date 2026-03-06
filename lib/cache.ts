@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { CacheData } from "./types";
+import { CacheData, Review } from "./types";
 
 const CACHE_PATH = path.join(process.cwd(), "data", "cache.json");
 
@@ -22,12 +22,15 @@ export function writeCache(data: CacheData): void {
   fs.writeFileSync(CACHE_PATH, JSON.stringify(data, null, 2), "utf-8");
 }
 
-export function clearCache(): void {
-  try {
-    if (fs.existsSync(CACHE_PATH)) {
-      fs.unlinkSync(CACHE_PATH);
-    }
-  } catch {
-    // ignore
+export function mergeReviews(existing: Review[], incoming: Review[]): Review[] {
+  const byUrl = new Map<string, Review>();
+  for (const r of existing) {
+    byUrl.set(r.guardianUrl, r);
   }
+  for (const r of incoming) {
+    if (!byUrl.has(r.guardianUrl)) {
+      byUrl.set(r.guardianUrl, r);
+    }
+  }
+  return Array.from(byUrl.values());
 }

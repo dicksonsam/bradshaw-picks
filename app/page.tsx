@@ -5,7 +5,7 @@ import { CacheData } from "@/lib/types";
 import ReviewCard from "./components/ReviewCard";
 import FilterBar, { SortOption, StarFilter } from "./components/FilterBar";
 import StatsBar from "./components/StatsBar";
-import RefreshButton from "./components/RefreshButton";
+import AdminBar from "./components/AdminBar";
 
 function SkeletonCard() {
   return (
@@ -47,21 +47,14 @@ export default function Home() {
     }
   }, []);
 
-  const handleRefresh = useCallback(async () => {
-    try {
-      setError(null);
-      const res = await fetch("/api/refresh", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to refresh data");
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Refresh failed");
-    }
-  }, []);
-
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const pendingCount = useMemo(
+    () => data?.reviews.filter((r) => r.platforms.length === 0).length ?? 0,
+    [data]
+  );
 
   const filteredReviews = useMemo(() => {
     if (!data) return [];
@@ -117,11 +110,15 @@ export default function Home() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-        {/* Stats and refresh */}
+        {/* Stats and admin */}
         {data && (
           <div className="flex flex-wrap items-end justify-between gap-4">
             <StatsBar reviews={data.reviews} />
-            <RefreshButton onRefresh={handleRefresh} />
+            <AdminBar
+              pendingCount={pendingCount}
+              totalCount={data.reviews.length}
+              onDataUpdate={fetchData}
+            />
           </div>
         )}
 
@@ -171,14 +168,6 @@ export default function Home() {
               </p>
             )}
           </>
-        )}
-
-        {/* Pending lookups notice */}
-        {data && data.pendingLookups.length > 0 && (
-          <p className="text-[#6A6259] text-xs text-center">
-            {data.pendingLookups.length} films still need streaming availability
-            lookup (API rate limit reached). Refresh later to complete.
-          </p>
         )}
       </main>
 

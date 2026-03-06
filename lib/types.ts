@@ -13,7 +13,13 @@ export interface Review {
 export interface CacheData {
   lastUpdated: string;
   reviews: Review[];
-  pendingLookups: string[];
+}
+
+export interface SSEProgressEvent {
+  type: "progress" | "complete" | "error";
+  checked?: number;
+  total?: number;
+  message: string;
 }
 
 export interface GuardianResult {

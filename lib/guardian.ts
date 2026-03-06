@@ -26,7 +26,7 @@ function extractTitleAndYear(headline: string): { title: string; year: string } 
   return { title: title.trim(), year };
 }
 
-export async function fetchBradshawReviews(): Promise<Review[]> {
+export async function fetchBradshawReviews(fromDate?: string): Promise<Review[]> {
   const apiKey = process.env.GUARDIAN_API_KEY;
   if (!apiKey) throw new Error("GUARDIAN_API_KEY not set");
 
@@ -35,7 +35,8 @@ export async function fetchBradshawReviews(): Promise<Review[]> {
   let page = 1;
   let totalPages = 1;
 
-  while (page <= totalPages && page <= 4) {
+  // TODO: Remove page cap for production
+  while (page <= totalPages && page <= 10) {
     const params = new URLSearchParams({
       tag: "profile/peterbradshaw",
       section: "film",
@@ -44,6 +45,10 @@ export async function fetchBradshawReviews(): Promise<Review[]> {
       page: String(page),
       "api-key": apiKey,
     });
+
+    if (fromDate) {
+      params.set("from-date", fromDate);
+    }
 
     const res = await fetch(`${API_BASE}?${params}`);
     if (!res.ok) {

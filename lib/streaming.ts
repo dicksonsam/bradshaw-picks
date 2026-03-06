@@ -120,3 +120,27 @@ export async function batchLookupStreaming(
 
   return results;
 }
+
+export async function streamingLookupWithProgress(
+  items: { title: string; releaseYearHint?: number }[],
+  onProgress: (checked: number, total: number, title: string, platforms: string[]) => void,
+  signal: AbortSignal
+): Promise<Map<string, string[]>> {
+  const results = new Map<string, string[]>();
+  const total = items.length;
+
+  for (let i = 0; i < total; i++) {
+    if (signal.aborted) break;
+
+    const { title, releaseYearHint } = items[i];
+    const platforms = await lookupStreaming(title, releaseYearHint);
+    results.set(title, platforms);
+    onProgress(i + 1, total, title, platforms);
+
+    if (i < total - 1 && !signal.aborted) {
+      await delay(300);
+    }
+  }
+
+  return results;
+}
