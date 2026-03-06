@@ -56,6 +56,11 @@ export default function Home() {
     [data]
   );
 
+  const skyPendingCount = useMemo(
+    () => data?.reviews.filter((r) => !r.platforms.includes("now")).length ?? 0,
+    [data]
+  );
+
   const filteredReviews = useMemo(() => {
     if (!data) return [];
 
@@ -116,6 +121,7 @@ export default function Home() {
             <StatsBar reviews={data.reviews} />
             <AdminBar
               pendingCount={pendingCount}
+              skyPendingCount={skyPendingCount}
               totalCount={data.reviews.length}
               onDataUpdate={fetchData}
             />

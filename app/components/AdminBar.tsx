@@ -4,12 +4,13 @@ import { useState, useCallback, useRef } from "react";
 
 interface AdminBarProps {
   pendingCount: number;
+  skyPendingCount: number;
   totalCount: number;
   onDataUpdate: () => void;
 }
 
 type ActionState = {
-  active: boolean;
+  activeUrl: string | null;
   progress: string;
 };
 
@@ -33,15 +34,15 @@ function Spinner() {
   );
 }
 
-export default function AdminBar({ pendingCount, totalCount, onDataUpdate }: AdminBarProps) {
-  const [state, setState] = useState<ActionState>({ active: false, progress: "" });
+export default function AdminBar({ pendingCount, skyPendingCount, totalCount, onDataUpdate }: AdminBarProps) {
+  const [state, setState] = useState<ActionState>({ activeUrl: null, progress: "" });
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const runSSEAction = useCallback(
     (url: string) => {
-      if (state.active) return;
+      if (state.activeUrl) return;
 
-      setState({ active: true, progress: "Starting..." });
+      setState({ activeUrl: url, progress: "Starting..." });
 
       const es = new EventSource(url);
       eventSourceRef.current = es;
@@ -49,8 +50,9 @@ export default function AdminBar({ pendingCount, totalCount, onDataUpdate }: Adm
       es.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
-          setState({ active: data.type !== "complete" && data.type !== "error", progress: data.message });
-          if (data.type === "complete" || data.type === "error") {
+          const done = data.type === "complete" || data.type === "error";
+          setState({ activeUrl: done ? null : url, progress: data.message });
+          if (done) {
             es.close();
             eventSourceRef.current = null;
             onDataUpdate();
@@ -63,11 +65,11 @@ export default function AdminBar({ pendingCount, totalCount, onDataUpdate }: Adm
       es.onerror = () => {
         es.close();
         eventSourceRef.current = null;
-        setState({ active: false, progress: "Connection lost." });
+        setState({ activeUrl: null, progress: "Connection lost." });
         onDataUpdate();
       };
     },
-    [state.active, onDataUpdate]
+    [state.activeUrl, onDataUpdate]
   );
 
   const handleCancel = useCallback(() => {
@@ -75,7 +77,7 @@ export default function AdminBar({ pendingCount, totalCount, onDataUpdate }: Adm
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    setState({ active: false, progress: "Cancelled. Progress saved." });
+    setState({ activeUrl: null, progress: "Cancelled. Progress saved." });
     onDataUpdate();
   }, [onDataUpdate]);
 
@@ -84,30 +86,41 @@ export default function AdminBar({ pendingCount, totalCount, onDataUpdate }: Adm
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => runSSEAction("/api/admin/check-reviews")}
-          disabled={state.active}
+          disabled={!!state.activeUrl}
           className="px-3 py-1.5 bg-[#D4A843] text-[#0D0B09] rounded-lg font-medium text-sm hover:bg-[#E8C86A] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          {state.active && <Spinner />}
+          {state.activeUrl === "/api/admin/check-reviews" && <Spinner />}
           Check for new reviews
         </button>
 
         <button
           onClick={() => runSSEAction("/api/admin/update-streaming?mode=pending")}
-          disabled={state.active || pendingCount === 0}
+          disabled={!!state.activeUrl || pendingCount === 0}
           className="px-3 py-1.5 bg-[#2A2520] text-[#E8E0D4] rounded-lg font-medium text-sm hover:bg-[#3A3530] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-[#3A3530]"
         >
+          {state.activeUrl === "/api/admin/update-streaming?mode=pending" && <Spinner />}
           Update new ({pendingCount} pending)
         </button>
 
         <button
           onClick={() => runSSEAction("/api/admin/update-streaming?mode=all")}
-          disabled={state.active || totalCount === 0}
+          disabled={!!state.activeUrl || totalCount === 0}
           className="px-3 py-1.5 bg-[#2A2520] text-[#E8E0D4] rounded-lg font-medium text-sm hover:bg-[#3A3530] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-[#3A3530]"
         >
+          {state.activeUrl === "/api/admin/update-streaming?mode=all" && <Spinner />}
           Refresh all streaming
         </button>
 
-        {state.active && (
+        <button
+          onClick={() => runSSEAction("/api/admin/update-sky?mode=pending")}
+          disabled={!!state.activeUrl || skyPendingCount === 0}
+          className="px-3 py-1.5 bg-[#0072C9]/20 text-[#4DA3E0] rounded-lg font-medium text-sm hover:bg-[#0072C9]/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-[#0072C9]/40"
+        >
+          {state.activeUrl === "/api/admin/update-sky?mode=pending" && <Spinner />}
+          Update Sky/Now ({skyPendingCount} pending)
+        </button>
+
+        {state.activeUrl && (
           <button
             onClick={handleCancel}
             className="px-3 py-1.5 bg-red-900/50 text-red-300 rounded-lg font-medium text-sm hover:bg-red-900/70 transition-colors border border-red-800"
@@ -118,7 +131,7 @@ export default function AdminBar({ pendingCount, totalCount, onDataUpdate }: Adm
       </div>
 
       {state.progress && (
-        <p className={`text-xs ${state.active ? "text-[#D4A843]" : "text-[#8A8279]"}`}>
+        <p className={`text-xs ${state.activeUrl ? "text-[#D4A843]" : "text-[#8A8279]"}`}>
           {state.progress}
         </p>
       )}

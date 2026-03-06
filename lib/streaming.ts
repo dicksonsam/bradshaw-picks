@@ -5,7 +5,7 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function normalise(s: string): string {
+export function normalise(s: string): string {
   return s
     .toLowerCase()
     .replace(/['']/g, "'")
@@ -15,7 +15,7 @@ function normalise(s: string): string {
     .trim();
 }
 
-function titlesMatch(searched: string, returned: string): boolean {
+export function titlesMatch(searched: string, returned: string): boolean {
   const a = normalise(searched);
   const b = normalise(returned);
 
