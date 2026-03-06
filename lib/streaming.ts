@@ -82,6 +82,8 @@ export async function lookupStreaming(
 
       const platforms: string[] = [];
       for (const option of options) {
+        const type = option?.type;
+        if (type === "rent" || type === "buy" || type === "addon") continue;
         const serviceId = option?.service?.id;
         if (serviceId && SERVICE_IDS.includes(serviceId)) {
           if (!platforms.includes(serviceId)) {
